@@ -1,77 +1,37 @@
-from pydantic import BaseModel, HttpUrl, Field, conint
-from typing import List, Optional
+from fastapi import FastAPI
+from app.config import QR_DIRECTORY
+from app.routers import qr_code, oauth  # Make sure these imports match your project structure.
+from app.services.qr_service import create_directory
+from app.utils.common import setup_logging
 
-class QRCodeRequest(BaseModel):
-    ul: HttpUrl = Field(..., description="The URL to encode into the QR code.")
-    fill_color: str = Field(default="red", description="Color of the QR code.", example="black")
-    back_color: str = Field(default="white", description="Background color of the QR code.", example="yellow")
-    size: conint(ge=1, le=40) = Field(default=10, description="Size of the QR code from 1 to 40.", example=20) # type: ignore
+# This function sets up logging based on the configuration specified in your logging configuration file.
+# It's important for monitoring and debugging.
+setup_logging()
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "url": "https://example.com",
-                "fill_color": "black",
-                "back_color": "yellow",
-                "size": 20
-            }
-        }
+# This ensures that the directory for storing QR codes exists when the application starts.
+# If it doesn't exist, it will be created.
+create_directory(QR_DIRECTORY)
 
-class Link(BaseModel):
-    rel: str = Field(..., description="Relation type of the link.")
-    href: HttpUrl = Field(..., description="The URL of the link.")
-    action: str = Field(..., description="HTTP method for the action this link represents.")
-    type: str = Field(default="application/json", description="Content type of the response for this link.")
+# This creates an instance of the FastAPI application.
+app = FastAPI(
+    title="QR Code Manager",
+    description="A FastAPI application for creating, listing available codes, and deleting QR codes. "
+                "It also supports OAuth for secure access.",
+    version="0.0.1",
+        redoc_url=None,
+    contact={
+        "name": "API Support",
+        "url": "http://www.example.com/support",
+        "email": "support@example.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    }
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "rel": "self",
-                "href": "https://api.example.com/qr/123",
-                "action": "GET",
-                "type": "application/json"
-            }
-        }
+)
 
-class QRCodeResponse(BaseModel):
-    mssage: str = Field(..., description="A message related to the QR code request.")
-    qr_code_url: HttpUrl = Field(..., description="The URL to the generated QR code.")
-    links: List[Link] = Field(default=[], description="HATEOAS links related to the QR code.")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "message": "QR code created successfully.",
-                "qr_code_url": "https://api.example.com/qr/123",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "https://api.example.com/qr/123",
-                        "action": "GET",
-                        "type": "application/json"
-                    }
-                ]
-            }
-        }
-
-class Token(BaseModel):
-    access_token: str = Field(..., description="The access token for authentication.")
-    token_type: str = Field(default="bearer", description="The type of the token.")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "access_token": "jhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "token_type": "bearer"
-            }
-        }
-
-class TokenData(BaseModel):
-    username: Optional[str] = Field(None, description="The username that the token represents.")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username": "user@example.com"
-            }
-        }
+# Here, we include the routers for our application. Routers define the paths and operations your API provides.
+# We have two routers in this case: one for managing QR codes and another for handling OAuth authentication.
+app.include_router(qr_code.ruter)  # QR code management routes
+app.include_router(oauth.router)  # OAuth authentication routes
