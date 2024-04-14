@@ -1,4 +1,4 @@
-## This is my Assignment 9
+## Assignment 9
 
 QR API![alt text](images/Authorization.png)
 
